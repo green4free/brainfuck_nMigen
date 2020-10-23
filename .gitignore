@@ -1,0 +1,5 @@
+build
+*.vcd
+*.gtkw
+__pycache__
+*.swp
