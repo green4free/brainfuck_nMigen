@@ -38,14 +38,18 @@ class Top(Elaboratable):
         
         m.submodules.car = platform.clock_domain_generator()
 
+        sync_n = ClockDomain("sync_n", clk_edge="neg")
+        m.d.comb += [sync_n.clk.eq(ClockSignal("sync")),sync_n.rst.eq(ResetSignal("sync"))]
+        m.domains.sync_n = sync_n
 
+        
         # Create our USB-to-serial converter.
         usb0 = platform.request(platform.default_usb_connection)
         m.submodules.usb_serial = usb_serial = \
                 USBSerialDevice(bus=usb0, idVendor=0x16d0, idProduct=0x0f3b)
          
-        m.submodules.usb_to_sys_fifo = usb_to_sys_fifo = AsyncFIFO(width=(usb_serial.rx.payload.width + 2), depth=32, r_domain="sync", w_domain="usb")
-        m.submodules.sys_to_usb_fifo = sys_to_usb_fifo = AsyncFIFO(width=(usb_serial.tx.payload.width + 2), depth=32, r_domain="usb", w_domain="sync")
+        m.submodules.usb_to_sys_fifo = usb_to_sys_fifo = AsyncFIFO(width=(usb_serial.rx.payload.width + 2), depth=2, r_domain="sync_n", w_domain="usb")
+        m.submodules.sys_to_usb_fifo = sys_to_usb_fifo = AsyncFIFO(width=(usb_serial.tx.payload.width + 2), depth=2, r_domain="usb", w_domain="sync_n")
         
         m.d.comb += [ 
             usb_serial.tx.payload.eq(sys_to_usb_fifo.r_data[2:]),
@@ -68,7 +72,6 @@ class Top(Elaboratable):
         m.submodules.register_file_r = register_file_r = register_file_mem.read_port()
         m.submodules.register_file_w = register_file_w = register_file_mem.write_port()
         m.submodules.CPU = CPU = Brainfuck_processor(len(self.brainfuck_code), data_width=register_file_r.data.width, i_addr_width=instruction_file_r.addr.width, d_addr_width=register_file_r.addr.width, stack_depth=32)
-
 
         m.d.comb += [
             sys_to_usb_fifo.w_data[0].eq(1),

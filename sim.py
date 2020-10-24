@@ -34,7 +34,11 @@ class Sim_top(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
-         
+
+        sync_n = ClockDomain("sync_n", clk_edge="neg")
+        m.d.comb += [sync_n.clk.eq(ClockSignal("sync")),sync_n.rst.eq(ResetSignal("sync"))]
+        m.domains.sync_n = sync_n
+        
         m.submodules.instruction_file_r = instruction_file_r = Memory(width=8, depth=len(self.brainfuck_code), init=self.brainfuck_code).read_port()
         register_file_mem = Memory(width=8, depth=self.brainfuck_array_size)
         m.submodules.register_file_r = register_file_r = register_file_mem.read_port()
@@ -75,7 +79,8 @@ if __name__ == "__main__":
             yield DUT.si_data.eq(ord("A"))
             yield DUT.si_valid.eq(0)
             yield DUT.so_ready.eq(0)
-            yield 
+            for _ in range(3210):
+                yield 
             yield DUT.si_valid.eq(1)
             yield DUT.so_ready.eq(1)
             yield
